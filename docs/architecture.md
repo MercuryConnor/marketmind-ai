@@ -11,7 +11,7 @@ User Query
     -> FastAPI Endpoint (POST /ask)
     -> FinancialAgent
     -> Tool Selection
-        -> Market Data Tool (Yahoo Finance)
+    -> Market Data Tool (Finnhub API)
         -> RAG Query Engine (LlamaIndex + FAISS)
     -> Context Aggregation
     -> Analysis + Insight Generation
@@ -28,7 +28,7 @@ User Query
 - app/agents/financial_agent.py
   - Query analysis, tool routing, fallback behavior, and response synthesis.
 - app/tools/market_data_tool.py
-  - Yahoo Finance market data retrieval and normalization helpers.
+  - Finnhub market data retrieval and normalization helpers.
 - app/services/data_pipeline.py
   - Cleaning, metric derivation, and normalized stock output shaping.
 - app/rag/index_builder.py

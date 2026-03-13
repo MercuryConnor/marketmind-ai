@@ -80,3 +80,4 @@ curl -X POST http://127.0.0.1:8000/ask \
 
 - The response data object may include partial context when one tool fails.
 - The agent falls back gracefully and still returns analysis/insight when possible.
+- Stock data retrieval requires a valid `FINNHUB_API_KEY` configured in `.env` or environment variables.

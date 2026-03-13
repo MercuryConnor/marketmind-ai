@@ -5,7 +5,7 @@ Financial AI Assistant is a modular backend service that answers financial quest
 It combines:
 
 - FastAPI for HTTP serving
-- Yahoo Finance for live market data
+- Finnhub API for live market data
 - LlamaIndex + FAISS for retrieval-augmented knowledge
 - MCP Python SDK for tool exposure and execution
 - A reasoning agent that routes and aggregates tool output
@@ -17,7 +17,7 @@ flowchart TD
         U[User Query] --> A[FastAPI POST /ask]
         A --> B[FinancialAgent]
         B --> C{Tool Selection}
-        C --> D[Market Data Tool\nYahoo Finance]
+        C --> D[Market Data Tool\nFinnhub API]
         C --> E[RAG Query Engine\nLlamaIndex + FAISS]
         D --> F[Context Aggregation]
         E --> F
@@ -54,19 +54,27 @@ python -m venv venv
 pip install -r requirements.txt
 ```
 
-### 4) Build Local RAG Index
+### 4) Configure Environment Variables
+
+Copy [financial-ai-assistant/.env.example](financial-ai-assistant/.env.example) to `.env` in the project root and set your Finnhub key:
+
+```dotenv
+FINNHUB_API_KEY=your_real_finnhub_key
+```
+
+### 5) Build Local RAG Index
 
 ```bash
 python -c "from app.rag.index_builder import build_financial_index; build_financial_index()"
 ```
 
-### 5) Run API
+### 6) Run API
 
 ```bash
 uvicorn app.main:app --reload
 ```
 
-### 6) Verify
+### 7) Verify
 
 ```bash
 curl http://127.0.0.1:8000/health

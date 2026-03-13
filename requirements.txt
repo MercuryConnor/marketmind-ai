@@ -13,7 +13,7 @@ faiss-cpu==1.9.0.post1
 llama-index-vector-stores-faiss==0.3.0
 
 # Financial Data
-yfinance==0.2.51
+# Finnhub API requests are made via httpx
 
 # MCP
 mcp==1.2.0

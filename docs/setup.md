@@ -35,6 +35,15 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
+## Configure API Key
+
+1. Copy `.env.example` to `.env` in [financial-ai-assistant](financial-ai-assistant).
+2. Set your Finnhub key:
+
+```dotenv
+FINNHUB_API_KEY=your_real_finnhub_key
+```
+
 ## Build Local RAG Index
 
 This step prepares FAISS index files from local documents.
@@ -82,3 +91,4 @@ python -m unittest discover -s tests -p "test_*.py" -v
 - If FAISS/LlamaIndex retrieval fails, rebuild index and retry.
 - If import errors occur, confirm the active interpreter is the project venv.
 - If port 8000 is busy, run uvicorn with an alternate port.
+- If stock queries fail, verify `FINNHUB_API_KEY` is present in `.env` and valid.
