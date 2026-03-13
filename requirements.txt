@@ -1,0 +1,23 @@
+# Financial AI Assistant - Dependencies
+# Core Framework
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+pydantic==2.10.4
+
+# LLM & RAG
+llama-index==0.12.5
+openai==1.59.5
+
+# Vector Store
+faiss-cpu==1.9.0.post1
+llama-index-vector-stores-faiss==0.3.0
+
+# Financial Data
+yfinance==0.2.51
+
+# MCP
+mcp==1.2.0
+
+# Utilities
+python-dotenv==1.0.1
+httpx==0.28.1
