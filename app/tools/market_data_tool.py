@@ -15,6 +15,7 @@ import os
 import time
 from typing import Any, cast
 
+import yfinance as yf
 import httpx
 from dotenv import load_dotenv
 
@@ -27,7 +28,7 @@ _FINNHUB_BASE_URL: str = "https://finnhub.io/api/v1"
 # Retry configuration for transient failures and rate limits
 _MAX_RETRIES: int = 3
 _RETRY_BASE_DELAY: float = 2.0  # seconds
-_HTTP_TIMEOUT_SECONDS: float = 10.0
+_HTTP_TIMEOUT_SECONDS: float = 5.0
 
 
 def get_stock_data(symbol: str) -> dict[str, Any]:
@@ -123,20 +124,15 @@ def _fetch_stock_data(symbol: str, api_key: str) -> dict[str, Any]:
             "/stock/profile2",
             {"symbol": symbol, "token": api_key},
         )
-        candles = _request_json(
-            client,
-            "/stock/candle",
-            _build_candles_params(symbol, api_key),
-        )
+        
 
     price = _safe_float(quote, "c")
     volume = _safe_int(quote, "v")
     market_cap = _market_cap_from_profile(profile)
-    weekly_change = _weekly_change_from_candles(candles)
+    weekly_change = _weekly_change_from_yfinance(symbol)
 
     has_profile = bool(profile)
-    has_candles = _candles_have_data(candles)
-    if price is None and not has_profile and not has_candles:
+    if not price and not bool(profile):
         logger.warning("No data returned for symbol %s", symbol)
         raise ValueError(f"Invalid stock symbol or no data available: {symbol}")
 
@@ -217,29 +213,22 @@ def _candles_have_data(candles: dict[str, Any]) -> bool:
     return len(closes) >= 2 and status == "ok"
 
 
-def _weekly_change_from_candles(candles: dict[str, Any]) -> float | None:
-    """Calculate weekly percentage change from Finnhub candle payload."""
-    closes_raw = candles.get("c")
-    status = candles.get("s")
-    closes = cast(list[Any], closes_raw) if isinstance(closes_raw, list) else []
-    if status != "ok" or len(closes) < 2:
-        return None
 
+def _weekly_change_from_yfinance(symbol: str) -> float | None:
+    """Fetch weekly price change using yfinance as free-tier fallback."""
     try:
-        normalized_closes = [float(value) for value in closes if value is not None]
-    except (TypeError, ValueError):
+        ticker = yf.Ticker(symbol)
+        hist = ticker.history(period="14d")
+        if hist.empty or len(hist) < 2:
+            return None
+        start = float(hist["Close"].iloc[0])
+        end = float(hist["Close"].iloc[-1])
+        if start == 0:
+            return None
+        return round(((end - start) / start) * 100, 2)
+    except Exception as exc:
+        logger.warning("yfinance weekly change failed for %s: %s", symbol, exc)
         return None
-
-    if len(normalized_closes) < 2:
-        return None
-
-    start_price = normalized_closes[0]
-    end_price = normalized_closes[-1]
-    if start_price == 0:
-        return None
-
-    change_pct = ((end_price - start_price) / start_price) * 100
-    return round(change_pct, 2)
 
 
 # ---------------------------------------------------------------------------

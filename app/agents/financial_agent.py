@@ -126,12 +126,21 @@ class FinancialAgent:
             "share",
         )
         rag_keywords = (
-            "what is",
+           "what is",
             "explain",
             "definition",
             "ratio",
             "valuation",
             "metric",
+            "invest",        
+            "should i",
+            "buy",
+            "sell",
+            "worth",
+            "good stock",
+            "recommend",
+            "analysis",
+            "outlook",
         )
 
         symbol = self._extract_symbol(query)
@@ -228,11 +237,29 @@ class FinancialAgent:
 
     def _build_insight(self, query: str, context: AgentContext, analysis: str) -> str:
         """Build concise final insight from available context and analysis."""
+        parts: list[str] = []
+        
         market_data = context["market_data"]
         if market_data is not None and market_data.get("symbol"):
             symbol = str(market_data.get("symbol"))
+            price = market_data.get("price")
             trend = market_data.get("weekly_change")
-            return f"For {symbol}, current signals are mixed; weekly change={trend}. {analysis}"
+            cap = market_data.get("market_cap")
+
+            price_str = f"${price:,.2f}" if price else "N/A"
+            trend_str = (
+                f"{trend:+.2f}% this week" if trend is not None else "weekly change unavailable"
+            )
+            cap_str = (
+                f"${cap / 1e12:.2f}T market cap" if cap and cap >= 1e12
+                else f"${cap / 1e9:.1f}B market cap" if cap
+                else None
+            )
+
+            summary = f"{symbol} is currently trading at {price_str}, {trend_str}"
+            if cap_str:
+                summary += f", with a {cap_str}"
+            parts.append(summary + ".")
 
         rag_context = context["rag_context"]
         if rag_context is not None:
@@ -251,7 +278,7 @@ class FinancialAgent:
     @staticmethod
     def _extract_symbol(query: str) -> str | None:
         """Extract a likely ticker symbol from user query."""
-        matches = TickerExtractor.findall(query)
+        matches = TickerExtractor.findall(query.upper())
         if not matches:
             return None
 
