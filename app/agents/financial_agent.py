@@ -73,6 +73,8 @@ class FinancialAgent:
             self._rag_tool = rag_tool
         self._reasoning_fn = reasoning_fn
         self._model_timeout_seconds = model_timeout_seconds
+        # Reuse a bounded executor to avoid creating unmanaged threads per request.
+        self._reasoning_executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="reasoning")
 
     def handle_query(self, query: str) -> dict[str, Any]:
         """Process a user query into structured financial insight.
@@ -184,12 +186,14 @@ class FinancialAgent:
         if self._reasoning_fn is None:
             return self._default_reasoning(query, context)
 
+        future = None
         try:
-            with ThreadPoolExecutor(max_workers=1) as executor:
-                model_context = cast(dict[str, Any], context)
-                future = executor.submit(self._reasoning_fn, query, model_context)
-                return str(future.result(timeout=self._model_timeout_seconds))
+            model_context = cast(dict[str, Any], context)
+            future = self._reasoning_executor.submit(self._reasoning_fn, query, model_context)
+            return str(future.result(timeout=self._model_timeout_seconds))
         except FuturesTimeoutError:
+            if future is not None:
+                future.cancel()
             logger.error("Reasoning model timed out after %.2f seconds", self._model_timeout_seconds)
             return "Reasoning timed out; returning best-effort analysis from available tools."
         except Exception as exc:
@@ -247,7 +251,7 @@ class FinancialAgent:
     @staticmethod
     def _extract_symbol(query: str) -> str | None:
         """Extract a likely ticker symbol from user query."""
-        matches = TickerExtractor.findall(query.upper())
+        matches = TickerExtractor.findall(query)
         if not matches:
             return None
 

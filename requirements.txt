@@ -6,6 +6,7 @@ pydantic==2.10.4
 
 # LLM & RAG
 llama-index==0.12.5
+llama-index-embeddings-huggingface==0.5.5
 openai==1.59.5
 
 # Vector Store

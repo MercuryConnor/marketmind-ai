@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
+from typing import Any
 
 import faiss
 from llama_index.core import (
@@ -12,7 +13,7 @@ from llama_index.core import (
     VectorStoreIndex,
     load_index_from_storage,
 )
-from llama_index.core.embeddings import MockEmbedding
+from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from llama_index.vector_stores.faiss import FaissVectorStore
 
 logger = logging.getLogger(__name__)
@@ -21,12 +22,19 @@ SUPPORTED_EXTENSIONS: tuple[str, ...] = (".txt", ".md")
 DEFAULT_DOCUMENTS_DIR: Path = Path(__file__).resolve().parents[2] / "data" / "financial_docs"
 DEFAULT_INDEX_DIR: Path = Path(__file__).resolve().parents[2] / "data" / "faiss_index"
 DEFAULT_EMBED_DIM: int = 384
+DEFAULT_EMBED_MODEL_NAME: str = "BAAI/bge-small-en-v1.5"
+
+
+def _get_embedding_model(model_name: str = DEFAULT_EMBED_MODEL_NAME) -> Any:
+    """Create the embedding model used for index build/load."""
+    return HuggingFaceEmbedding(model_name=model_name)
 
 
 def build_financial_index(
     documents_dir: str | Path = DEFAULT_DOCUMENTS_DIR,
     persist_dir: str | Path = DEFAULT_INDEX_DIR,
     embedding_dim: int = DEFAULT_EMBED_DIM,
+    embed_model_name: str = DEFAULT_EMBED_MODEL_NAME,
 ) -> VectorStoreIndex:
     """Build a FAISS vector index from financial documents.
 
@@ -34,6 +42,7 @@ def build_financial_index(
         documents_dir: Directory containing source documents.
         persist_dir: Directory where index artifacts are persisted.
         embedding_dim: Embedding dimension used by the embedding model.
+        embed_model_name: HuggingFace embedding model identifier.
 
     Returns:
         The built ``VectorStoreIndex`` instance.
@@ -74,7 +83,7 @@ def build_financial_index(
     faiss_index = faiss.IndexFlatL2(embedding_dim)
     vector_store = FaissVectorStore(faiss_index=faiss_index)
     storage_context = StorageContext.from_defaults(vector_store=vector_store)
-    embed_model = MockEmbedding(embed_dim=embedding_dim)
+    embed_model = _get_embedding_model(model_name=embed_model_name)
 
     try:
         index = VectorStoreIndex.from_documents(
@@ -98,12 +107,14 @@ def build_financial_index(
 def load_financial_index(
     persist_dir: str | Path = DEFAULT_INDEX_DIR,
     embedding_dim: int = DEFAULT_EMBED_DIM,
+    embed_model_name: str = DEFAULT_EMBED_MODEL_NAME,
 ) -> VectorStoreIndex:
     """Load a persisted FAISS-backed ``VectorStoreIndex``.
 
     Args:
         persist_dir: Directory containing persisted index files.
         embedding_dim: Embedding dimension used at index build time.
+        embed_model_name: HuggingFace embedding model identifier.
 
     Returns:
         Loaded ``VectorStoreIndex`` instance.
@@ -130,7 +141,7 @@ def load_financial_index(
         )
         index = load_index_from_storage(
             storage_context=storage_context,
-            embed_model=MockEmbedding(embed_dim=embedding_dim),
+            embed_model=_get_embedding_model(model_name=embed_model_name),
         )
     except Exception as exc:
         logger.exception("Failed to load persisted FAISS index from %s", persist_path)

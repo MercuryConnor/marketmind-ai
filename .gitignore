@@ -31,6 +31,8 @@ htmlcov/
 # Data (large files, generated indexes)
 data/financial_docs/*.faiss
 data/financial_docs/*.pkl
+data/faiss_index/*.json
+data/faiss_index/*.faiss
 
 # OS
 Thumbs.db

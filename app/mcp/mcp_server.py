@@ -6,6 +6,7 @@ import asyncio
 import inspect
 import json
 import logging
+import threading
 from collections.abc import Coroutine
 from typing import Any, Callable, cast
 
@@ -132,5 +133,27 @@ class MCPToolExecutor:
     def _resolve_awaitable(value: Any) -> Any:
         """Resolve awaitable values for environments where MCP APIs are async."""
         if inspect.isawaitable(value):
-            return asyncio.run(cast(Coroutine[Any, Any, Any], value))
+            coroutine = cast(Coroutine[Any, Any, Any], value)
+            try:
+                asyncio.get_running_loop()
+            except RuntimeError:
+                return asyncio.run(coroutine)
+
+            result_holder: dict[str, Any] = {}
+            error_holder: dict[str, BaseException] = {}
+
+            def _runner() -> None:
+                try:
+                    result_holder["result"] = asyncio.run(coroutine)
+                except BaseException as exc:  # noqa: BLE001
+                    error_holder["error"] = exc
+
+            thread = threading.Thread(target=_runner, daemon=True)
+            thread.start()
+            thread.join()
+
+            if "error" in error_holder:
+                raise error_holder["error"]
+
+            return result_holder.get("result")
         return value

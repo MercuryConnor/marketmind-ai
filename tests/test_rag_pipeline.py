@@ -7,6 +7,8 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+from llama_index.core.embeddings import MockEmbedding
+
 from app.rag.index_builder import build_financial_index, load_financial_index
 from app.rag.query_engine import query_financial_docs
 
@@ -47,9 +49,10 @@ class TestRagPipeline(unittest.TestCase):
             docs_dir.mkdir(parents=True, exist_ok=True)
             (docs_dir / "finance.txt").write_text("P/E ratio compares price to earnings.", encoding="utf-8")
 
-            with patch("app.rag.index_builder.VectorStoreIndex.from_documents", side_effect=Exception("embed fail")):
-                with self.assertRaises(RuntimeError):
-                    build_financial_index(documents_dir=docs_dir)
+            with patch("app.rag.index_builder._get_embedding_model", return_value=MockEmbedding(embed_dim=384)):
+                with patch("app.rag.index_builder.VectorStoreIndex.from_documents", side_effect=Exception("embed fail")):
+                    with self.assertRaises(RuntimeError):
+                        build_financial_index(documents_dir=docs_dir)
 
     def test_query_financial_docs_returns_snippets(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -66,9 +69,10 @@ class TestRagPipeline(unittest.TestCase):
                 encoding="utf-8",
             )
 
-            build_financial_index(documents_dir=docs_dir, persist_dir=index_dir)
-            loaded_index = load_financial_index(persist_dir=index_dir)
-            result = query_financial_docs("What is P/E ratio?", index=loaded_index, top_k=2)
+            with patch("app.rag.index_builder._get_embedding_model", return_value=MockEmbedding(embed_dim=384)):
+                build_financial_index(documents_dir=docs_dir, persist_dir=index_dir)
+                loaded_index = load_financial_index(persist_dir=index_dir)
+                result = query_financial_docs("What is P/E ratio?", index=loaded_index, top_k=2)
 
             self.assertIn("snippets", result)
             self.assertGreater(len(result["snippets"]), 0)
