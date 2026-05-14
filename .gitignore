@@ -23,6 +23,11 @@ dist/
 build/
 *.egg-info/
 
+# HuggingFace cache
+.hf_cache/
+.cache/
+
+
 # Testing
 .pytest_cache/
 htmlcov/
